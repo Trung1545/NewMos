@@ -1,0 +1,74 @@
+services:
+  # =========================================================================
+  # 1. DATABASE SERVICE: PostgreSQL 15 Alpine
+  # =========================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: newmos_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: newmos_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d newmos_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - newmos_network
+
+  # =========================================================================
+  # 2. BACKEND SERVICE: Spring Boot 3 Java 17
+  # =========================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: newmos_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/newmos_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_FLYWAY_ENABLED: "true"
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+    networks:
+      - newmos_network
+
+  # =========================================================================
+  # 3. FRONTEND SERVICE: React 19 + Vite + Nginx Reverse Proxy
+  # =========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: newmos_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - newmos_network
+
+# =========================================================================
+# NETWORKS & VOLUMES
+# =========================================================================
+networks:
+  newmos_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

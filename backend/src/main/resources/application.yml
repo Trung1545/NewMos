@@ -1,0 +1,113 @@
+server:
+  port: 8080
+  # servlet:
+  #   context-path: /api/v1
+  shutdown: graceful
+
+spring:
+  application:
+    name: shoe-ecommerce-backend
+
+  # ====================================================================
+  # 1. CẤU HÌNH DATABASE POSTGRESQL (MẶC ĐỊNH KHUYÊN DÙNG)
+  # ====================================================================
+  datasource:
+    url: jdbc:postgresql://localhost:5432/newmos_db
+    username: postgres
+    password: 123456
+    driver-class-name: org.postgresql.Driver
+    # Cấu hình Connection Pool HikariCP hiệu năng cao
+    hikari:
+      pool-name: ShoeStoreHikariCP
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000 # 5 phút
+      max-lifetime: 1800000 # 30 phút
+      connection-timeout: 20000 # 20 giây
+      connection-test-query: SELECT 1
+
+  # ====================================================================
+  # GHI CHÚ: NẾU SỬ DỤNG MICROSOFT SQL SERVER THAY VÌ POSTGRESQL:
+  # (Bỏ comment cấu hình dưới và comment phần PostgreSQL ở trên)
+  # ====================================================================
+  # datasource:
+  #   url: jdbc:sqlserver://localhost:1433;databaseName=shoe_ecommerce_db;encrypt=true;trustServerCertificate=true;
+  #   username: sa
+  #   password: YourStrongPassword123!
+  #   driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+  # jpa:
+  #   properties:
+  #     hibernate:
+  #       dialect: org.hibernate.dialect.SQLServerDialect
+
+  # ====================================================================
+  # 2. CẤU HÌNH SPRING DATA JPA & HIBERNATE ORM
+  # ====================================================================
+  jpa:
+    database: postgresql
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      # Tự động đồng bộ và tạo/sửa bảng theo Entity khi khởi động ứng dụng
+      ddl-auto: update
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+        implicit-strategy: org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy
+    show-sql: true
+    open-in-view: false # Tối ưu hóa: đóng Database Connection ngay sau khi xong Transaction
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+        # Tối ưu hóa hiệu năng: Batch fetch size xử lý triệt để bài toán N+1 Queries
+        default_batch_fetch_size: 25
+        order_inserts: true
+        order_updates: true
+        jdbc:
+          batch_size: 25
+          batch_versioned_data: true
+
+  # ====================================================================
+  # 3. CẤU HÌNH REDIS (CACHE, PHIÊN ĐĂNG NHẬP, BLACKLIST TOKEN)
+  # ====================================================================
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: redispassword
+      timeout: 60000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+          max-wait: -1ms
+
+  # ====================================================================
+  # 4. CẤU HÌNH JACKSON JSON SERIALIZER
+  # ====================================================================
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans: false
+    time-zone: Asia/Ho_Chi_Minh
+    default-property-inclusion: non_null
+
+# ====================================================================
+# 5. CẤU HÌNH JWT (JSON WEB TOKEN) AUTHENTICATION
+# ====================================================================
+jwt:
+  secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+  expiration: 86400000 # 24 giờ (milliseconds)
+  refresh-expiration: 604800000 # 7 ngày (milliseconds)
+
+# ====================================================================
+# 6. LOGGING SYSTEM
+# ====================================================================
+logging:
+  level:
+    root: INFO
+    com.shoestore: DEBUG
+    com.ecommerce.shoe: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.security: INFO

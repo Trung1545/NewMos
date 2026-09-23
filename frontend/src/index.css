@@ -1,0 +1,103 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Montserrat', sans-serif;
+  --color-brand-red: #DC2626;
+  --color-brand-black: #0A0A0A;
+  --color-brand-gray: #171717;
+}
+
+@layer base {
+  :root {
+    --brand-red: #DC2626;
+    --brand-red-hover: #B91C1C;
+    --brand-red-light: #EF4444;
+    --brand-black: #0A0A0A;
+    --brand-canvas: #F9FAFB;
+    --brand-card: #FFFFFF;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: #F9FAFB;
+    color: #0A0A0A;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Typography Hierarchy Standards: Montserrat cho tiêu đề, nút bấm */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+  }
+
+  button {
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: -0.025em;
+  }
+}
+
+/* Design System Utilities */
+.btn-primary {
+  background-color: #DC2626;
+  color: #FFFFFF;
+  font-weight: 700;
+  border-radius: 0.5rem; /* rounded-lg (8px) */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-primary:hover {
+  background-color: #B91C1C;
+}
+
+.btn-secondary {
+  background-color: #0A0A0A;
+  color: #FFFFFF;
+  font-weight: 700;
+  border-radius: 0.5rem; /* rounded-lg (8px) */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-secondary:hover {
+  background-color: #171717;
+}
+
+.card-standard {
+  background-color: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 0.75rem; /* rounded-xl (12px) */
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+.input-standard {
+  border: 1px solid #D1D5DB;
+  border-radius: 0.5rem; /* rounded-lg (8px) */
+  background-color: #FFFFFF;
+  color: #0A0A0A;
+  transition: border-color 0.2s;
+}
+.input-standard:focus {
+  outline: none;
+  border-color: #DC2626;
+  box-shadow: 0 0 0 1px #DC2626;
+}
+
+.bg-tech-grid {
+  background-size: 24px 24px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+}
+
+.bg-tech-grid-dark {
+  background-size: 24px 24px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+}
