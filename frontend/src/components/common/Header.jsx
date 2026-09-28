@@ -9,7 +9,6 @@ import {
   X,
   User,
   Sparkles,
-  Flame,
   LogIn,
   LogOut,
   Package,
@@ -106,18 +105,12 @@ export function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-18 gap-4 sm:gap-6">
             {/* Logo Thương Hiệu Bên Trái */}
-            <Link to="/" className="flex items-center gap-2.5 group shrink-0">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-red-600 to-rose-600 flex items-center justify-center shadow-lg shadow-red-600/30 group-hover:scale-105 transition-transform duration-200">
-                <Flame className="w-5 h-5 text-white fill-white" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-display font-black text-2xl tracking-wider leading-none text-white">
-                  NEW<span className="text-red-600">MOS</span>
-                </span>
-                <span className="text-[9px] font-display font-semibold uppercase tracking-widest text-neutral-400 -mt-0.5 group-hover:text-red-400 transition-colors">
-                  Sport Shoes & AI Fit
-                </span>
-              </div>
+            <Link to="/" className="flex items-center group shrink-0" title="NewMos - Pickleball">
+              <img
+                src="/images/newmos-logo-white.png"
+                alt="NewMos Pickleball Logo"
+                className="h-8 md:h-10 lg:h-12 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+              />
             </Link>
 
             {/* Danh Mục Điều Hướng Ở Giữa */}

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
-  Flame,
   Lock,
   Mail,
   Phone,
@@ -261,14 +260,12 @@ export function AuthPage() {
           <div className="absolute -bottom-24 -right-24 w-64 h-64 rounded-full bg-red-600/10 blur-3xl pointer-events-none" />
 
           <div className="relative z-10 space-y-6">
-            <Link to="/" className="inline-flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-red-600 to-rose-600 flex items-center justify-center shadow-lg shadow-red-600/30">
-                <Flame className="w-5 h-5 text-white fill-white" />
-              </div>
-              <div className="flex items-center tracking-wider leading-none font-display font-black text-2xl">
-                <span className="text-white">NEW</span>
-                <span className="text-[#DC2626]">MOS</span>
-              </div>
+            <Link to="/" className="inline-flex items-center group" title="NewMos - Pickleball">
+              <img
+                src="/images/newmos-logo-white.png"
+                alt="NewMos Pickleball Logo"
+                className="h-12 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+              />
             </Link>
 
             <div>

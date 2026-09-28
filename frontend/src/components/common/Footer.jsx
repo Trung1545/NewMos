@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Flame,
   Send,
   CheckCircle2,
   Phone,
@@ -31,13 +30,12 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8">
           {/* Cột 1: Thông tin thương hiệu, slogan và mạng xã hội (4 cols) */}
           <div className="lg:col-span-4 space-y-4">
-            <Link to="/" className="inline-flex items-center gap-2.5 group">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-red-600 to-rose-600 flex items-center justify-center shadow-lg shadow-red-600/30 group-hover:scale-105 transition-transform duration-200">
-                <Flame className="w-5 h-5 text-white fill-white" />
-              </div>
-              <span className="font-display font-black text-2xl tracking-wider leading-none text-white">
-                NEW<span className="text-red-600">MOS</span>
-              </span>
+            <Link to="/" className="inline-flex items-center group" title="NewMos - Pickleball">
+              <img
+                src="/images/newmos-logo-white.png"
+                alt="NewMos Pickleball Logo"
+                className="h-12 md:h-14 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+              />
             </Link>
 
             <p className="text-xs font-semibold text-white leading-relaxed pr-4">
