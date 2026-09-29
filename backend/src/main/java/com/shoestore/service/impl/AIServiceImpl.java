@@ -166,22 +166,31 @@ public class AIServiceImpl implements AIService {
         String brandName = product.getBrand() != null ? product.getBrand().getName() : "General";
 
         // 1. Xác định số đo sinh trắc học
-        double length = footLengthCm != null ? footLengthCm : 26.5;
-        double width = footWidthCm != null ? footWidthCm : 10.0;
+        Double length = footLengthCm != null && footLengthCm > 0 ? footLengthCm : null;
+        Double width = footWidthCm != null && footWidthCm > 0 ? footWidthCm : null;
         FootShape shape = FootShape.STANDARD;
         ArchType arch = ArchType.NORMAL;
         PreferredFit fit = preferredFit != null ? preferredFit : PreferredFit.PERFECT;
 
-        // Nếu người dùng đã đăng nhập và có hồ sơ, ưu tiên dùng hồ sơ thực
-        if (userId != null) {
+        // Nếu người dùng đã đăng nhập và chưa truyền số đo cụ thể, ưu tiên dùng hồ sơ thực
+        if (userId != null && length == null) {
             AIFitProfileResponse myProfile = getMyProfile(userId);
-            if (myProfile != null) {
+            if (myProfile != null && myProfile.getFootLengthCm() != null && myProfile.getFootLengthCm() > 0) {
                 length = myProfile.getFootLengthCm();
                 width = myProfile.getFootWidthCm();
                 if (myProfile.getFootShape() != null) shape = myProfile.getFootShape();
                 if (myProfile.getArchType() != null) arch = myProfile.getArchType();
                 if (myProfile.getPreferredFit() != null) fit = myProfile.getPreferredFit();
             }
+        }
+
+        // Không tự động tạo dữ liệu mẫu nếu người dùng chưa có số đo hợp lệ (> 0)
+        if (length == null || length <= 0) {
+            return null;
+        }
+
+        if (width == null || width <= 0) {
+            width = length * 0.38; // Tỷ lệ chiều rộng bàn chân tiêu chuẩn sinh học dựa trên chiều dài thực tế
         }
 
         // 2. Tính toán ma trận size theo hãng của sản phẩm

@@ -22,4 +22,8 @@ public class UpdateProfileRequest {
     private String address;
 
     private String avatarUrl;
+
+    private String gender;
+
+    private String dateOfBirth;
 }

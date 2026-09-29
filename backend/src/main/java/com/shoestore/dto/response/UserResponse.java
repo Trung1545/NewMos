@@ -20,6 +20,8 @@ public class UserResponse {
     private String phone;
     private String address;
     private String avatarUrl;
+    private String gender;
+    private String dateOfBirth;
     private Boolean isActive;
     private LocalDateTime createdAt;
     private Set<String> roles;

@@ -32,6 +32,8 @@ public class UserMapper {
                 .phone(user.getPhone())
                 .address(user.getAddress())
                 .avatarUrl(user.getAvatarUrl())
+                .gender(user.getGender())
+                .dateOfBirth(user.getDateOfBirth())
                 .isActive(user.getIsActive())
                 .createdAt(user.getCreatedAt())
                 .roles(roles)

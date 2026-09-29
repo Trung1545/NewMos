@@ -26,6 +26,14 @@ export default defineConfig({
         ws: true,
         changeOrigin: true,
       },
+      '/images/avatars': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/uploads': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
     },
   },
   build: {

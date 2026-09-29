@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { useAIStore } from './useAIStore';
 
 export interface UserProfile {
   id?: number | string;
@@ -54,6 +55,9 @@ export const useAuthStore = create<AuthState>()(
           localStorage.removeItem('access_token');
           localStorage.removeItem('token');
         }
+        try {
+          useAIStore.getState().clearProfile();
+        } catch (_) {}
         set({
           token: null,
           user: null,

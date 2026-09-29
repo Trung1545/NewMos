@@ -353,7 +353,7 @@ public final class SizingCalculatorUtil {
             String shoeModel
     ) {
         if (footLengthCm == null || footLengthCm <= 0) {
-            footLengthCm = 23.5;
+            throw new IllegalArgumentException("Chiều dài bàn chân phải lớn hơn 0");
         }
         if (footShape == null) {
             footShape = FootShape.STANDARD;

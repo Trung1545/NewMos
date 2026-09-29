@@ -82,6 +82,9 @@ public class AIController {
                 footWidthCm,
                 preferredFit
         );
+        if (response == null) {
+            return ResponseEntity.ok(ApiResponse.success("Chưa có dữ liệu hồ sơ đo chân", null));
+        }
         return ResponseEntity.ok(ApiResponse.success("Gợi ý kích thước sản phẩm thành công!", response));
     }
 

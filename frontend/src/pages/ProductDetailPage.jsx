@@ -16,6 +16,7 @@ import {
   PackageX,
   AlertCircle,
   Zap,
+  Ruler,
 } from 'lucide-react';
 import { useCartStore } from '../stores/useCartStore';
 import { useAIStore } from '../stores/useAIStore';
@@ -188,13 +189,17 @@ export function ProductDetailPage({
     if (productData?.id) {
       aiService.recommendProductSize(productData.id)
         .then((res) => {
-          const rec = res?.data || res;
-          if (rec?.recommendedSizeEu) {
+          const rec = res?.data;
+          if (rec && rec.recommendedSizeEu) {
             setAiRecommendation(rec);
             setRecommendedSize(rec.recommendedSizeEu);
+          } else {
+            setAiRecommendation(null);
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          setAiRecommendation(null);
+        });
     }
   }, [productData?.id, isAuthenticated, setRecommendedSize]);
 
@@ -675,19 +680,31 @@ export function ProductDetailPage({
                 </span>
               </div>
 
-              <p className="text-[11px] text-neutral-300 leading-relaxed">
-                {recommendedSize ? (
-                  <>
-                    Thuật toán AI đối chiếu form giày <strong className="text-white">{shoeBrand}</strong> với bàn chân bạn: Đề xuất size{' '}
-                    <strong className="text-red-400 font-black text-xs">EU {recommendedSize}</strong>.
-                    {aiRecommendation?.fittingAdvice ? ` ${aiRecommendation.fittingAdvice}` : ' Đảm bảo độ ôm chuẩn xác và thoải mái tối ưu ngón chân.'}
-                  </>
-                ) : (
-                  <>
-                    Trợ lý NewMos AI hỗ trợ đối chiếu thông số chiều dài và dáng bàn chân của bạn theo thời gian thực để gợi ý size giày chuẩn xác theo khuôn giày {shoeBrand}.
-                  </>
+              <div className="space-y-2">
+                <p className="text-[11px] text-neutral-300 leading-relaxed">
+                  {recommendedSize ? (
+                    <>
+                      Thuật toán AI đối chiếu form giày <strong className="text-white">{shoeBrand}</strong> với bàn chân bạn: Đề xuất size{' '}
+                      <strong className="text-red-400 font-black text-xs">EU {recommendedSize}</strong>.
+                      {aiRecommendation?.fittingAdvice ? ` ${aiRecommendation.fittingAdvice}` : ' Đảm bảo độ ôm chuẩn xác và thoải mái tối ưu ngón chân.'}
+                    </>
+                  ) : (
+                    <>
+                      Bạn chưa cập nhật số đo bàn chân. Hãy đo ngay để NewMos gợi ý size giày chuẩn xác nhất.
+                    </>
+                  )}
+                </p>
+                {!recommendedSize && (
+                  <button
+                    type="button"
+                    onClick={() => setIsSizeGuideOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#DC2626] hover:bg-[#B91C1C] text-white text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm shadow-red-600/30"
+                  >
+                    <Ruler className="w-3.5 h-3.5" />
+                    <span>Bắt đầu đo / Nhập số đo chân</span>
+                  </button>
                 )}
-              </p>
+              </div>
             </div>
 
             {/* Nút link thể thao: Hướng dẫn đo chân & tính size chuẩn */}

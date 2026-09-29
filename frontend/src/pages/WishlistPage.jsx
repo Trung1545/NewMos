@@ -105,7 +105,8 @@ export function WishlistPage() {
   };
 
   const handleAddToCart = (product) => {
-    const size = selectedSizes[product.id] || recommendedSize || product.defaultSize || '42';
+    const defaultProductSize = product.variants?.[0]?.sizeEu || product.defaultSize || '38';
+    const size = selectedSizes[product.id] || recommendedSize || defaultProductSize;
     const matchedVariant = product.variants?.find((v) => String(v.sizeEu) === String(size)) || product.variants?.[0];
 
     addToCart(
@@ -126,7 +127,8 @@ export function WishlistPage() {
 
   const handleAddAllToCart = () => {
     wishlistItems.forEach((product) => {
-      const size = selectedSizes[product.id] || recommendedSize || product.defaultSize || '42';
+      const defaultProductSize = product.variants?.[0]?.sizeEu || product.defaultSize || '38';
+      const size = selectedSizes[product.id] || recommendedSize || defaultProductSize;
       const matchedVariant = product.variants?.find((v) => String(v.sizeEu) === String(size)) || product.variants?.[0];
 
       addToCart(
@@ -222,7 +224,7 @@ export function WishlistPage() {
           /* LƯỚI CARD SẢN PHẨM YÊU THÍCH */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {wishlistItems.map((product) => {
-              const currentSize = selectedSizes[product.id] || recommendedSize || product.defaultSize || '42';
+              const currentSize = selectedSizes[product.id] || recommendedSize || product.variants?.[0]?.sizeEu || product.defaultSize || '38';
 
               return (
                 <div

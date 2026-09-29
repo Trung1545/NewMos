@@ -230,8 +230,16 @@ export function Header() {
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                     className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1 rounded-lg border border-neutral-800 bg-neutral-900 hover:border-[#DC2626] transition-all cursor-pointer"
                   >
-                    <div className="w-6 h-6 rounded-full bg-[#DC2626] text-white flex items-center justify-center font-bold text-[10px] shadow-xs">
-                      {getUserInitials()}
+                    <div className="w-6 h-6 rounded-full bg-[#DC2626] text-white flex items-center justify-center font-bold text-[10px] shadow-xs overflow-hidden shrink-0 relative">
+                      <span className="select-none">{getUserInitials()}</span>
+                      {user?.avatarUrl && (
+                        <img
+                          src={user.avatarUrl}
+                          alt={user?.fullName || 'Avatar'}
+                          className="w-full h-full object-cover absolute inset-0 bg-[#DC2626]"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      )}
                     </div>
                     <span className="hidden sm:inline text-xs font-semibold text-neutral-200 max-w-[110px] truncate">
                       {user?.fullName || user?.email?.split('@')[0] || 'Tài khoản'}
@@ -244,12 +252,27 @@ export function Header() {
                     <div className="absolute right-0 mt-2 w-64 rounded-xl bg-[#141414] border border-neutral-800 shadow-xl shadow-black/60 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                       {/* User Info Header */}
                       <div className="px-4 py-2.5 border-b border-neutral-800">
-                        <p className="text-xs font-bold text-white truncate">
-                          {user?.fullName || 'Khách hàng'}
-                        </p>
-                        <p className="text-[11px] text-neutral-400 truncate mt-0.5">
-                          {user?.email}
-                        </p>
+                        <div className="flex items-center gap-2.5 mb-1.5">
+                          <div className="w-8 h-8 rounded-full bg-[#DC2626] text-white flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden relative">
+                            <span className="select-none">{getUserInitials()}</span>
+                            {user?.avatarUrl && (
+                              <img
+                                src={user.avatarUrl}
+                                alt=""
+                                className="w-full h-full object-cover absolute inset-0 bg-[#DC2626]"
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-white truncate">
+                              {user?.fullName || 'Khách hàng'}
+                            </p>
+                            <p className="text-[11px] text-neutral-400 truncate">
+                              {user?.email}
+                            </p>
+                          </div>
+                        </div>
                         <div className="mt-1.5 flex items-center gap-1.5">
                           {isAdmin ? (
                             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-950/80 border border-red-500/50 text-[10px] font-black text-[#DC2626] uppercase font-mono">

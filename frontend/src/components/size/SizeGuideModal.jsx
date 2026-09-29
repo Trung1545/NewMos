@@ -10,22 +10,30 @@ import {
   Flame,
   Info,
   ShieldAlert,
-  RotateCcw,
+  Save,
 } from 'lucide-react';
 import { sizeService } from '../../services/sizeService';
+import { aiService } from '../../services/aiService';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useAIStore } from '../../stores/useAIStore';
 
 /**
- * Thuật toán tính size NewMos tiêu chuẩn (Client-side fallback đảm bảo luôn hoạt động tức thì)
+ * Thuật toán tính size NewMos tiêu chuẩn (Chỉ chạy khi length > 0)
  */
 function calculateNewMosSizeFallback(lengthCm, footShape, shoeModel = 'RUNNER_PRO') {
+  const numLength = parseFloat(lengthCm);
+  if (isNaN(numLength) || numLength <= 0) {
+    return null;
+  }
+
   let baseSize;
-  if (lengthCm <= 22.5) {
+  if (numLength <= 22.5) {
     baseSize = 36;
-  } else if (lengthCm <= 23.0) {
+  } else if (numLength <= 23.0) {
     baseSize = 37;
-  } else if (lengthCm <= 23.5) {
+  } else if (numLength <= 23.5) {
     baseSize = 38;
-  } else if (lengthCm <= 24.0) {
+  } else if (numLength <= 24.0) {
     baseSize = 39;
   } else {
     baseSize = 40;
@@ -62,22 +70,53 @@ export function SizeGuideModal({
   isOpen = false,
   onClose = () => {},
   onApplySize = () => {},
+  onProfileSaved = null,
+  initialProfile = null,
   shoeModel = 'RUNNER_PRO',
   shoeName = 'NewMos Runner Pro',
   currentSize = null,
 }) {
-  const [footLengthCm, setFootLengthCm] = useState(23.5);
-  const [footShape, setFootShape] = useState('STANDARD'); // 'SLIM' | 'STANDARD' | 'WIDE'
-  const [isCalculating, setIsCalculating] = useState(false);
-  const [calculationResult, setCalculationResult] = useState(null);
+  const { isAuthenticated } = useAuthStore();
+  const { userProfile, setMeasurements, setUserProfile } = useAIStore();
 
-  // Khởi tạo kết quả mặc định khi mở modal
+  // Khởi tạo state rỗng / null ban đầu - Không sử dụng mock data
+  const [footLengthCm, setFootLengthCm] = useState('');
+  const [footWidthCm, setFootWidthCm] = useState('');
+  const [footShape, setFootShape] = useState('STANDARD'); // 'SLIM' | 'STANDARD' | 'WIDE'
+  const [archType, setArchType] = useState('NORMAL'); // 'NORMAL' | 'HIGH' | 'LOW_FLAT'
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [calculationResult, setCalculationResult] = useState(null);
+  const [validationError, setValidationError] = useState('');
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+
+  // Đồng bộ với hồ sơ đã lưu nếu có khi mở modal
   useEffect(() => {
     if (isOpen) {
-      const initial = calculateNewMosSizeFallback(footLengthCm, footShape, shoeModel);
-      setCalculationResult(initial);
+      setValidationError('');
+      setSaveSuccessMsg('');
+      const existing = initialProfile || userProfile;
+      if (existing && existing.footLengthCm && Number(existing.footLengthCm) > 0) {
+        setFootLengthCm(String(existing.footLengthCm));
+        setFootWidthCm(existing.footWidthCm ? String(existing.footWidthCm) : '');
+        setFootShape(existing.footShape || 'STANDARD');
+        setArchType(existing.archType || 'NORMAL');
+        const instantResult = calculateNewMosSizeFallback(
+          existing.footLengthCm,
+          existing.footShape || 'STANDARD',
+          shoeModel
+        );
+        setCalculationResult(instantResult);
+      } else {
+        // Trạng thái ban đầu rỗng / null
+        setFootLengthCm('');
+        setFootWidthCm('');
+        setFootShape('STANDARD');
+        setArchType('NORMAL');
+        setCalculationResult(null);
+      }
     }
-  }, [isOpen, shoeModel]);
+  }, [isOpen, initialProfile, userProfile, shoeModel]);
 
   // Đóng modal khi nhấn phím Escape
   useEffect(() => {
@@ -94,22 +133,54 @@ export function SizeGuideModal({
 
   // Xử lý thay đổi số đo cm
   const handleLengthChange = (val) => {
-    const num = Math.min(26.0, Math.max(21.0, parseFloat(val) || 21.0));
-    setFootLengthCm(Math.round(num * 10) / 10);
+    setValidationError('');
+    setSaveSuccessMsg('');
+    if (val === '') {
+      setFootLengthCm('');
+      setCalculationResult(null);
+      return;
+    }
+    setFootLengthCm(val);
   };
 
-  // Tính toán size giày
+  const handleSliderChange = (val) => {
+    setValidationError('');
+    setSaveSuccessMsg('');
+    const num = Math.min(26.0, Math.max(21.0, parseFloat(val) || 21.0));
+    setFootLengthCm(String(Math.round(num * 10) / 10));
+  };
+
+  // Tính toán size giày - Chỉ chạy khi chiều dài > 0
   const handleCalculate = async () => {
+    setValidationError('');
+    setSaveSuccessMsg('');
+
+    const len = parseFloat(footLengthCm);
+    if (isNaN(len) || len <= 0) {
+      setValidationError('Vui lòng nhập chiều dài bàn chân hợp lệ (> 0 cm).');
+      return;
+    }
+
+    if (footWidthCm && (isNaN(parseFloat(footWidthCm)) || parseFloat(footWidthCm) <= 0)) {
+      setValidationError('Độ rộng bàn chân nếu nhập phải lớn hơn 0 cm.');
+      return;
+    }
+
     setIsCalculating(true);
 
-    // 1. Luôn tính toán ngay lập tức bằng thuật toán chuẩn NewMos để người dùng thấy kết quả ngay
-    const instantResult = calculateNewMosSizeFallback(footLengthCm, footShape, shoeModel);
+    const wid = footWidthCm ? parseFloat(footWidthCm) : Math.round(len * 0.38 * 10) / 10;
+
+    // 1. Tính toán ngay lập tức bằng thuật toán chuẩn NewMos
+    const instantResult = calculateNewMosSizeFallback(len, footShape, shoeModel);
     setCalculationResult(instantResult);
+
+    // Cập nhật store tạm thời
+    setMeasurements(len, wid, shoeModel, footShape);
 
     // 2. Đồng bộ với Backend API nếu có sẵn
     try {
       const response = await sizeService.calculateSize({
-        footLengthCm: Number(footLengthCm),
+        footLengthCm: len,
         footShape,
         shoeModel: shoeModel || 'RUNNER_PRO',
       });
@@ -129,12 +200,47 @@ export function SizeGuideModal({
     }
   };
 
-  // Áp dụng size vào trang chi tiết và đóng modal
-  const handleApply = () => {
-    if (calculationResult?.recommendedSize) {
-      onApplySize(String(calculationResult.recommendedSize));
-      onClose();
+  // Áp dụng size vào trang chi tiết và lưu hồ sơ
+  const handleApply = async () => {
+    if (!calculationResult?.recommendedSize) return;
+
+    const len = parseFloat(footLengthCm);
+    if (isNaN(len) || len <= 0) return;
+
+    const wid = footWidthCm ? parseFloat(footWidthCm) : Math.round(len * 0.38 * 10) / 10;
+
+    // Cập nhật useAIStore
+    setMeasurements(len, wid, shoeModel, footShape);
+
+    // Đồng bộ với Backend nếu người dùng đã đăng nhập
+    if (isAuthenticated) {
+      setIsSaving(true);
+      try {
+        const res = await aiService.saveProfile({
+          footLengthCm: len,
+          footWidthCm: wid,
+          footShape,
+          archType,
+          preferredFit: 'PERFECT',
+          brand: 'NewMos',
+          profileName: 'Hồ sơ đo chân NewMos',
+        });
+        const savedData = res?.data || res;
+        if (savedData) {
+          setUserProfile(savedData);
+          if (onProfileSaved) {
+            onProfileSaved(savedData);
+          }
+        }
+      } catch (err) {
+        console.warn('Không thể lưu hồ sơ đo chân vào tài khoản:', err);
+      } finally {
+        setIsSaving(false);
+      }
     }
+
+    onApplySize(String(calculationResult.recommendedSize));
+    onClose();
   };
 
   return (
@@ -254,21 +360,25 @@ export function SizeGuideModal({
                 </span>
               </div>
 
-              {/* 1. Nhập số đo cm: Input trực tiếp & Slider */}
+              {/* 1. Nhập số đo chiều dài cm: Input trực tiếp & Slider */}
               <div className="bg-neutral-900/70 p-4 rounded-xl border border-neutral-800 space-y-3">
                 <div className="flex justify-between items-center">
-                  <label className="text-xs font-bold uppercase tracking-wider text-neutral-200">
-                    Chiều Dài Bàn Chân (Foot Length)
-                  </label>
-                  <div className="flex items-center gap-1.5 bg-[#141414] border border-neutral-700 px-3 py-1 rounded-lg">
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-neutral-200 block">
+                      Chiều Dài Bàn Chân (Foot Length) *
+                    </label>
+                    <span className="text-[10px] text-neutral-500">Từ gót chân đến ngón dài nhất</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-[#141414] border border-neutral-700 px-3 py-1.5 rounded-lg focus-within:border-[#DC2626]">
                     <input
                       type="number"
-                      min="21.0"
-                      max="26.0"
+                      min="20.0"
+                      max="27.0"
                       step="0.1"
+                      placeholder="0.0"
                       value={footLengthCm}
                       onChange={(e) => handleLengthChange(e.target.value)}
-                      className="w-14 bg-transparent font-mono text-base font-black text-[#DC2626] text-right focus:outline-none"
+                      className="w-16 bg-transparent font-mono text-base font-black text-[#DC2626] text-right focus:outline-none"
                     />
                     <span className="font-mono text-xs font-bold text-neutral-400">cm</span>
                   </div>
@@ -280,8 +390,8 @@ export function SizeGuideModal({
                   min="21.0"
                   max="26.0"
                   step="0.1"
-                  value={footLengthCm}
-                  onChange={(e) => handleLengthChange(e.target.value)}
+                  value={footLengthCm || 23.5}
+                  onChange={(e) => handleSliderChange(e.target.value)}
                   className="w-full h-2.5 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-[#DC2626]"
                 />
 
@@ -292,7 +402,32 @@ export function SizeGuideModal({
                 </div>
               </div>
 
-              {/* 2. Chọn dáng bàn chân: 3 nút radio thể thao */}
+              {/* 2. Nhập số đo độ rộng cm (Tùy chọn) */}
+              <div className="bg-neutral-900/70 p-4 rounded-xl border border-neutral-800 space-y-2">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-neutral-200 block">
+                      Độ Rộng Bàn Chân (Foot Width)
+                    </label>
+                    <span className="text-[10px] text-neutral-500">Tùy chọn - Hệ thống tự ước tính nếu để trống</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-[#141414] border border-neutral-700 px-3 py-1 rounded-lg focus-within:border-[#DC2626]">
+                    <input
+                      type="number"
+                      min="7.0"
+                      max="14.0"
+                      step="0.1"
+                      placeholder="VD: 9.8"
+                      value={footWidthCm}
+                      onChange={(e) => setFootWidthCm(e.target.value)}
+                      className="w-16 bg-transparent font-mono text-xs font-bold text-white text-right focus:outline-none"
+                    />
+                    <span className="font-mono text-xs font-bold text-neutral-400">cm</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Chọn dáng bàn chân: 3 nút radio thể thao */}
               <div className="space-y-2">
                 <label className="block text-xs font-bold uppercase tracking-wider text-neutral-300">
                   Chọn Dáng Bàn Chân Của Bạn
@@ -379,18 +514,26 @@ export function SizeGuideModal({
                         )}
                       </div>
                     </div>
-                    <span className="text-xs font-extrabold text-white">Chân bè ngang / Mu dày</span>
+                    <span className="text-xs font-extrabold text-white">Chân bè / Mu dày</span>
                     <span className="text-[10px] text-neutral-400 mt-0.5">Tự động tăng size</span>
                   </button>
                 </div>
               </div>
 
-              {/* 3. Nút hành động: TÍNH SIZE CỦA BẠN màu đỏ thể thao */}
+              {/* Thông báo lỗi validation */}
+              {validationError && (
+                <div className="p-3 rounded-xl bg-red-950/60 border border-red-500/40 text-red-300 text-xs flex items-center gap-2 animate-in fade-in">
+                  <ShieldAlert className="w-4 h-4 text-red-500 shrink-0" />
+                  <span>{validationError}</span>
+                </div>
+              )}
+
+              {/* 4. Nút hành động: TÍNH SIZE CỦA BẠN */}
               <button
                 type="button"
-                disabled={isCalculating}
+                disabled={isCalculating || !footLengthCm || Number(footLengthCm) <= 0}
                 onClick={handleCalculate}
-                className="w-full py-3.5 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                className="w-full py-3.5 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isCalculating ? (
                   <>
@@ -471,29 +614,52 @@ export function SizeGuideModal({
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-10 space-y-2">
-                    <Sparkles className="w-8 h-8 text-neutral-600 mx-auto" />
-                    <p className="text-xs text-neutral-400">
-                      Chọn số đo và nhấn "Tính size của bạn" để xem kết quả.
-                    </p>
+                  /* ================= EMPTY STATE KHI CHƯA CÓ KẾT QUẢ ================= */
+                  <div className="text-center py-10 px-4 space-y-4 rounded-2xl bg-neutral-900/40 border border-neutral-800/80 animate-in fade-in duration-200">
+                    <div className="w-14 h-14 mx-auto rounded-2xl bg-red-950/40 border border-red-500/20 text-[#DC2626] flex items-center justify-center">
+                      <Footprints className="w-7 h-7" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <h4 className="text-sm font-black uppercase text-white tracking-wide">
+                        Chưa Có Kết Quả Tính Size
+                      </h4>
+                      <p className="text-xs text-neutral-400 max-w-xs mx-auto leading-relaxed">
+                        Bạn chưa cập nhật số đo bàn chân. Hãy nhập số đo chiều dài (cm) và chọn dáng bàn chân ở Khu vực 2, sau đó nhấn <strong className="text-red-400">"TÍNH SIZE CỦA BẠN"</strong> để NewMos gợi ý size giày chuẩn xác nhất.
+                      </p>
+                    </div>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-800/80 text-[10px] font-mono text-neutral-400">
+                      <Info className="w-3.5 h-3.5 text-[#DC2626]" />
+                      <span>Dải đo chuẩn: 21.0 cm - 26.0 cm (Size 36 - 40)</span>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Nút bấm: Áp dụng size này ngay */}
+              {/* Nút bấm: Áp dụng size & Lưu hồ sơ */}
               <div className="pt-2 border-t border-neutral-800 space-y-2">
                 <button
                   type="button"
                   onClick={handleApply}
-                  disabled={!calculationResult}
-                  className="w-full py-3.5 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 transition-colors cursor-pointer disabled:opacity-40"
+                  disabled={!calculationResult || isSaving}
+                  className="w-full py-3.5 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <span>Áp Dụng Size Này Ngay</span>
-                  <ArrowRight className="w-4 h-4" />
+                  {isSaving ? (
+                    <>
+                      <Sparkles className="w-4 h-4 animate-spin" />
+                      <span>ĐANG LƯU HỒ SƠ...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{isAuthenticated ? 'Lưu Hồ Sơ & Áp Dụng Size' : 'Áp Dụng Size Này Ngay'}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
 
                 <p className="text-[10px] text-center text-neutral-500">
-                  Tự động chọn size {calculationResult?.recommendedSize || 38} trên trang chi tiết sản phẩm
+                  {calculationResult?.recommendedSize
+                    ? `Tự động chọn size ${calculationResult.recommendedSize} trên trang chi tiết sản phẩm`
+                    : 'Nhập số đo để tự động xác định size chuẩn NewMos'}
                 </p>
               </div>
             </div>

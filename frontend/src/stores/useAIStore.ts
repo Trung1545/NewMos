@@ -23,9 +23,10 @@ export interface AIState {
   activeBrand: string | null;
   activeProductId: number | string | null;
 
-  // Measurement state
+  // Measurement state: Trạng thái ban đầu bắt buộc là null / rỗng
   footLength: number | null;
   footWidth: number | null;
+  footShape: string | null;
   shoeModel: string | null;
   recommendedSize: number | string | null;
 
@@ -36,9 +37,10 @@ export interface AIState {
   setModalOpen: (open: boolean, brand?: string, productId?: number | string) => void;
   setVisualSearchOpen: (open: boolean) => void;
   setRecommendedSize: (size: number | string | null) => void;
-  setMeasurements: (length: number, width: number, shoeModel?: string) => void;
+  setMeasurements: (length: number | null, width?: number | null, shoeModel?: string, footShape?: string) => void;
   setScanResults: (results: AIFitResult | null) => void;
   setUserProfile: (profile: any) => void;
+  clearProfile: () => void;
   resetAI: () => void;
 }
 
@@ -53,6 +55,7 @@ export const useAIStore = create<AIState>()(
       recommendedSize: null,
       footLength: null,
       footWidth: null,
+      footShape: null,
       shoeModel: null,
 
       scanResults: null,
@@ -69,33 +72,98 @@ export const useAIStore = create<AIState>()(
 
       setRecommendedSize: (size) => set({ recommendedSize: size }),
 
-      setMeasurements: (length, width, shoeModel) => {
-        const baseEU = Math.round((length + 1.5) * 1.5);
+      // Đảm bảo các hàm tính toán gợi ý size giày chỉ chạy khi giá trị chiều dài (length) hợp lệ (> 0)
+      setMeasurements: (length, width, shoeModel, footShape) => {
+        const numLength = typeof length === 'number' ? length : parseFloat(String(length));
+        const numWidth = typeof width === 'number' ? width : parseFloat(String(width));
+
+        if (isNaN(numLength) || numLength <= 0) {
+          set({
+            footLength: null,
+            footWidth: null,
+            footShape: null,
+            shoeModel: null,
+            recommendedSize: null,
+          });
+          return;
+        }
+
+        const validWidth = !isNaN(numWidth) && numWidth > 0 ? numWidth : null;
+
+        // Tính size theo công thức chuẩn NewMos Runner Pro (36 - 40)
+        let baseSize = 38;
+        if (numLength <= 22.5) baseSize = 36;
+        else if (numLength <= 23.0) baseSize = 37;
+        else if (numLength <= 23.5) baseSize = 38;
+        else if (numLength <= 24.0) baseSize = 39;
+        else baseSize = 40;
+
+        let rec = baseSize;
+        if (footShape === 'WIDE') {
+          rec = baseSize >= 40 ? 40 : baseSize + 1;
+        }
+
         set({
-          footLength: length,
-          footWidth: width,
+          footLength: numLength,
+          footWidth: validWidth,
+          footShape: footShape || null,
           shoeModel: shoeModel || null,
-          recommendedSize: baseEU,
+          recommendedSize: rec,
         });
       },
 
       setScanResults: (results) => {
+        if (!results || !results.footLengthCm || Number(results.footLengthCm) <= 0) {
+          set({
+            scanResults: null,
+            recommendedSize: null,
+            footLength: null,
+            footWidth: null,
+            footShape: null,
+          });
+          return;
+        }
+
         set({
           scanResults: results,
           recommendedSize: results?.recommendedSizeEu || null,
-          footLength: results?.footLengthCm || null,
-          footWidth: results?.footWidthCm || null,
+          footLength: Number(results.footLengthCm),
+          footWidth: results?.footWidthCm && Number(results.footWidthCm) > 0 ? Number(results.footWidthCm) : null,
+          footShape: results?.footShape || null,
         });
       },
 
       setUserProfile: (profile) => {
+        if (!profile || !profile.footLengthCm || Number(profile.footLengthCm) <= 0) {
+          set({
+            userProfile: null,
+            recommendedSize: null,
+            footLength: null,
+            footWidth: null,
+            footShape: null,
+          });
+          return;
+        }
+
         set({
           userProfile: profile,
-          recommendedSize: profile?.recommendedSizeEu || null,
-          footLength: profile?.footLengthCm || null,
-          footWidth: profile?.footWidthCm || null,
+          recommendedSize: profile.recommendedSizeEu || null,
+          footLength: Number(profile.footLengthCm),
+          footWidth: profile.footWidthCm && Number(profile.footWidthCm) > 0 ? Number(profile.footWidthCm) : null,
+          footShape: profile.footShape || null,
         });
       },
+
+      clearProfile: () =>
+        set({
+          footLength: null,
+          footWidth: null,
+          footShape: null,
+          shoeModel: null,
+          recommendedSize: null,
+          scanResults: null,
+          userProfile: null,
+        }),
 
       resetAI: () =>
         set({
@@ -107,13 +175,40 @@ export const useAIStore = create<AIState>()(
     {
       name: 'ai-fit-storage',
       storage: createJSONStorage(() => (typeof window !== 'undefined' ? window.localStorage : (null as unknown as Storage))),
-      partialize: (state) => ({
-        recommendedSize: state.recommendedSize,
-        footLength: state.footLength,
-        footWidth: state.footWidth,
-        scanResults: state.scanResults,
-        userProfile: state.userProfile,
-      }),
+      partialize: (state) => {
+        // Chỉ lưu vào local storage khi có số đo thực sự hợp lệ (> 0)
+        if (!state.footLength || state.footLength <= 0) {
+          return {
+            recommendedSize: null,
+            footLength: null,
+            footWidth: null,
+            footShape: null,
+            scanResults: null,
+            userProfile: null,
+          };
+        }
+        return {
+          recommendedSize: state.recommendedSize,
+          footLength: state.footLength,
+          footWidth: state.footWidth,
+          footShape: state.footShape,
+          scanResults: state.scanResults,
+          userProfile: state.userProfile,
+        };
+      },
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Xóa bỏ triệt để mock data cũ trong localStorage nếu không hợp lệ
+          if (!state.footLength || state.footLength <= 0) {
+            state.footLength = null;
+            state.footWidth = null;
+            state.footShape = null;
+            state.recommendedSize = null;
+            state.userProfile = null;
+            state.scanResults = null;
+          }
+        }
+      },
     }
   )
 );

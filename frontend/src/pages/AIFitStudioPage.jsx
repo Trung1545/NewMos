@@ -15,15 +15,39 @@ import {
   Layers,
 } from 'lucide-react';
 import { useAIStore } from '../stores/useAIStore';
+import { useAuthStore } from '../stores/useAuthStore';
 import { useChatbotStore } from '../stores/useChatbotStore';
 import { productService } from '../services/productService';
+import { aiService } from '../services/aiService';
 import { formatCurrency } from '../lib/utils';
 
 export function AIFitStudioPage() {
-  const { setModalOpen, resetAI, scanResults, recommendedSize } = useAIStore();
+  const { isAuthenticated } = useAuthStore();
+  const { setModalOpen, resetAI, footLength, footWidth, footShape, recommendedSize, userProfile, setUserProfile } = useAIStore();
   const { openChat } = useChatbotStore();
   const [activeStep, setActiveStep] = useState(1);
   const [aiMatchedProducts, setAiMatchedProducts] = useState([]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      aiService.getMyProfile()
+        .then((res) => {
+          if (res?.data && res.data.footLengthCm && Number(res.data.footLengthCm) > 0) {
+            setUserProfile(res.data);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isAuthenticated, setUserProfile]);
+
+  const hasFootProfile = Boolean(
+    (userProfile?.footLengthCm && Number(userProfile.footLengthCm) > 0) ||
+    (footLength && Number(footLength) > 0)
+  );
+  const activeLength = userProfile?.footLengthCm || footLength;
+  const activeWidth = userProfile?.footWidthCm || footWidth;
+  const activeShape = userProfile?.footShape || footShape || 'STANDARD';
+  const activeSize = userProfile?.recommendedSizeEu || recommendedSize;
 
   useEffect(() => {
     productService.getFeaturedProducts()
@@ -47,7 +71,6 @@ export function AIFitStudioPage() {
   }, []);
 
   const handleLaunchModal = () => {
-    resetAI();
     setModalOpen(true);
   };
 
@@ -140,6 +163,110 @@ export function AIFitStudioPage() {
             </p>
           </div>
         </div>
+
+        {/* Foot Profile Status Card: Telemetry thật hoặc Empty State */}
+        {hasFootProfile ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <span className="text-[10px] font-mono font-bold text-[#DC2626] uppercase tracking-wider">
+                  HỒ SƠ ĐO CHÂN CỦA BẠN
+                </span>
+                <h2 className="text-xl font-black uppercase tracking-tight text-[#0A0A0A] mt-0.5">
+                  Dữ Liệu Số Đo Bàn Chân NewMos Fit
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={handleLaunchModal}
+                className="px-4 py-2 rounded-xl bg-[#0A0A0A] hover:bg-neutral-800 text-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 self-start sm:self-auto cursor-pointer"
+              >
+                <Ruler className="w-3.5 h-3.5 text-red-500" />
+                <span>Đo Lại / Cập Nhật</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                <span className="text-[10px] font-mono uppercase font-bold text-slate-400 block">
+                  CHIỀU DÀI BÀN CHÂN
+                </span>
+                <div className="text-xl font-mono font-black text-slate-900 mt-1">
+                  {Math.round(activeLength * 10)} MM
+                </div>
+                <span className="text-[10px] text-slate-500">
+                  Chuẩn {activeLength} cm
+                </span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                <span className="text-[10px] font-mono uppercase font-bold text-slate-400 block">
+                  ĐỘ RỘNG BÀN CHÂN
+                </span>
+                <div className="text-xl font-mono font-black text-slate-900 mt-1">
+                  {activeWidth ? `${Math.round(activeWidth * 10)} MM` : 'Tiêu chuẩn'}
+                </div>
+                <span className="text-[10px] text-slate-500">
+                  {activeShape === 'WIDE' ? 'Bè ngang' : activeShape === 'SLIM' ? 'Thon gọn' : 'Tiêu chuẩn'}
+                </span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                <span className="text-[10px] font-mono uppercase font-bold text-slate-400 block">
+                  DÁNG BÀN CHÂN
+                </span>
+                <div className="text-xl font-mono font-black text-red-600 mt-1">
+                  {activeShape === 'WIDE' ? 'BÈ NGANG' : activeShape === 'SLIM' ? 'THON GỌN' : 'CHUẨN'}
+                </div>
+                <span className="text-[10px] text-slate-500">Tự động bù trừ form</span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                <span className="text-[10px] font-mono uppercase font-bold text-slate-400 block">
+                  SIZE KHUYÊN DÙNG
+                </span>
+                <div className="text-xl font-mono font-black text-emerald-600 mt-1">
+                  {activeSize ? `${activeSize} EU` : 'N/A'}
+                </div>
+                <span className="text-[10px] text-slate-500">Khớp form NewMos</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-xs text-center animate-in fade-in duration-200">
+            <div className="max-w-md mx-auto space-y-4">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-red-50 border border-red-200 text-[#DC2626] flex items-center justify-center shadow-md shadow-red-600/10">
+                <Footprints className="w-7 h-7" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-black uppercase text-[#0A0A0A]">
+                  Chưa Có Hồ Sơ Đo Chân
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Bạn chưa cập nhật số đo bàn chân. Hãy đo ngay để NewMos gợi ý size giày chuẩn xác nhất.
+                </p>
+              </div>
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleLaunchModal}
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-bold uppercase tracking-wider shadow-md shadow-red-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <Ruler className="w-4 h-4" />
+                  <span>Bắt Đầu Đo / Nhập Số Đo Chân</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openChat('Chào NewMos AI, hãy hướng dẫn mình đo và tính size chân chuẩn xác')}
+                  className="w-full sm:w-auto px-5 py-3 rounded-xl bg-[#0A0A0A] hover:bg-neutral-800 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-red-400" />
+                  <span>Kích Hoạt Trợ Lý AI</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Live Telemetry Display Matrix */}
         <div className="bg-white rounded-xl border border-slate-200 p-8 shadow-xs">

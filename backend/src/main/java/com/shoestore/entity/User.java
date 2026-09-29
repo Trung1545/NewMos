@@ -46,12 +46,18 @@ public class User extends BaseEntity {
     @Column(name = "password", length = 255, nullable = false)
     private String password;
 
-    @Column(name = "avatar_url", length = 500)
+    @Column(name = "avatar_url", columnDefinition = "TEXT")
     private String avatarUrl;
 
     @Size(max = 500, message = "Địa chỉ không vượt quá 500 ký tự")
     @Column(name = "address", length = 500)
     private String address;
+
+    @Column(name = "gender", length = 20)
+    private String gender;
+
+    @Column(name = "date_of_birth", length = 30)
+    private String dateOfBirth;
 
     @Builder.Default
     @Column(name = "is_active", nullable = false)
